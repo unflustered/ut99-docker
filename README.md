@@ -5,7 +5,7 @@
 To start up a server quickly, run a new container using the image:
 
 ```
-docker run -p 7777-7778:7777-7778/udp -p 8777:8777/udp -p 7770:7770/tcp --name ut slapt/ut99
+docker run -p 7777-7780:7777-7780/udp -p 8777:8777/udp -p 7770:7770/tcp --name ut slapt/ut99
 ```
 
 The server will start up on port 7777, with the web admin UI available on port 7770.
