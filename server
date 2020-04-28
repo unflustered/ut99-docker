@@ -6,27 +6,6 @@ set -eu
 # GAME_MODE
 # MUTATORS
 
-# env vars passed in via Docker, which will result in the modification of configuration files:
-# LEAVE_CONFIG
-# SERVER_NAME
-# SERVER_SHORT_NAME
-# ADMIN_NAME
-# ADMIN_EMAIL
-# REGION
-# MOTD_LINE1
-# FASTDL_URL
-# FASTDL_USE_COMPRESSION
-# NET_MAX_CLIENT_RATE
-# NET_INITIAL_CONNECT_TIMEOUT
-# MAX_PLAYERS
-# MIN_PLAYERS
-# MAX_SPECTATORS
-# GAME_PASSWORD
-# ADMIN_PASSWORD
-# WEB_ADMIN_USER
-# WEB_ADMIN_PASSWORD
-# ADVERTISE_SERVER
-
 UT_PATH="/ut-server"
 
 die() {
@@ -67,81 +46,32 @@ END { if (done == 0) { if (instate >= 1) { print item "=" value; } else { print 
    fi
 }
 
-
-# fiddle with the config files to match env vars
-adjust_config() {
-  # server info
-  ini_set Engine.GameReplicationInfo ServerName "$SERVER_NAME" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set Engine.GameReplicationInfo ShortName "$SERVER_SHORT_NAME" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set Engine.GameReplicationInfo AdminName "$ADMIN_NAME" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set Engine.GameReplicationInfo AdminEmail "$ADMIN_EMAIL" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set Engine.GameReplicationInfo Region "$REGION" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set Engine.GameReplicationInfo MOTDLine1 "$MOTD_LINE1" "${UT_PATH}/System/UnrealTournament.ini"
-
-  # http redirect
-  ini_set IpDrv.HTTPDownload RedirectToURL "$FASTDL_URL" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set IpDrv.HTTPDownload UseCompression "$FASTDL_USE_COMPRESSION" "${UT_PATH}/System/UnrealTournament.ini"
-
-  # net rates
-  ini_set IpDrv.TcpNetDriver MaxClientRate "$NET_MAX_CLIENT_RATE" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set IpDrv.TcpNetDriver InitialConnectTimeout "$NET_INITIAL_CONNECT_TIMEOUT" "${UT_PATH}/System/UnrealTournament.ini"
-
-  # do uplink to master server
-  ini_set IpServer.UdpServerUplink DoUplink "$ADVERTISE_SERVER" "${UT_PATH}/System/UnrealTournament.ini"
-
-  ini_set Botpack.DeathMatchPlus MinPlayers "$MIN_PLAYERS" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set Botpack.Domination MinPlayers "$MIN_PLAYERS" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set Botpack.CTFGame MinPlayers "$MIN_PLAYERS" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set Botpack.Assault MinPlayers "$MIN_PLAYERS" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set Botpack.TeamGamePlus MinPlayers "$MIN_PLAYERS" "${UT_PATH}/System/UnrealTournament.ini"
-
-  ini_set Engine.GameInfo MaxPlayers "$MAX_PLAYERS" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set Engine.GameInfo MaxSpectators "$MAX_SPECTATORS" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set Engine.GameInfo GamePassword "$GAME_PASSWORD" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set Engine.GameInfo AdminPassword "$ADMIN_PASSWORD" "${UT_PATH}/System/UnrealTournament.ini"
-
-  ini_set UWeb.WebServer bEnabled True "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set UWeb.WebServer ListenPort 7770 "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set UTServerAdmin.UTServerAdmin AdminUsername "$WEB_ADMIN_USER" "${UT_PATH}/System/UnrealTournament.ini"
-  ini_set UTServerAdmin.UTServerAdmin AdminPassword "$WEB_ADMIN_PASSWORD" "${UT_PATH}/System/UnrealTournament.ini"
-}
-
 launch_server() {
   UCC_CMD="${STARTUP_MAP}?game=$GAME_MODE"
   if [ -n "$MUTATORS" ]; then
     UCC_CMD="${UCC_CMD}?mutator=${MUTATORS}"
   fi
 
-  UCC_CMD="${UCC_CMD} userini=${UT_PATH}/System/User.ini"
-  UCC_CMD="${UCC_CMD} ini=${UT_PATH}/System/UnrealTournament.ini"
-  UCC_CMD="${UCC_CMD} --nohomedir log=/dev/null"
-
-  cd "$UT_PATH" && \
-    exec "${UT_PATH}/ucc" server "$UCC_CMD"
+  # blanking HOME gets the ucc preference dir to be /.loki/ut
+  HOME="" exec "${UT_PATH}/ucc" server "$UCC_CMD"
 }
 
-# if [ "$#" -gt 0 ]; then
-#   while [ "$#" -gt 0 ]; do
-#     case "$1" in
-#       ini_set)
-#         [ "$#" -gt 4 ] || die 1 "Usage: $0 $1 FILE SECTION PROPERTY VALUE"
-#         ini_file="$2";shift
-#         ini_section="$2";shift
-#         ini_prop="$2";shift
-#         ini_val="$2";shift
-#         ini_set "$ini_section" "$ini_prop" "$ini_val" "$ini_file"
-#         ;;
-#       *)
-#         die 1 "wtf is $1"
-#     esac
-#     shift
-#   done
-# else
-# fi
-
-# unless LEAVE_CONFIG is set, adjust config to match env
-if [ -z "$LEAVE_CONFIG" ]; then
-  adjust_config
+if [ "$#" -gt 0 ]; then
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      ini_set)
+        [ "$#" -gt 4 ] || die 1 "Usage: $0 $1 FILE SECTION PROPERTY VALUE"
+        ini_file="$2";shift
+        ini_section="$2";shift
+        ini_prop="$2";shift
+        ini_val="$2";shift
+        ini_set "$ini_section" "$ini_prop" "$ini_val" "$ini_file"
+        ;;
+      *)
+        die 1 "wtf is $1"
+    esac
+    shift
+  done
+else
+  launch_server
 fi
-
-launch_server
