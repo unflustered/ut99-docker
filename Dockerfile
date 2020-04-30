@@ -1,7 +1,8 @@
 FROM i386/ubuntu:18.04 AS tmp
 COPY ./ut ./umodasu ./bonus_content ./
-RUN tar xzf ut-server-436.tar.gz && \
-    tar xzf UTPG-451-patch.tar.gz -C ut-server Web System Help
+RUN tar xzf ut-server-436.tar.gz --exclude=ut-server/Logs && \
+    tar xzf UTPG-451-patch.tar.gz -C ut-server Web System Help && \
+    chown -R root:root ut-server
 
 # install bonus pack content
 RUN apt-get update && apt-get install -y perl-modules && rm -fr /var/lib/apt/lists && \
@@ -10,9 +11,6 @@ RUN apt-get update && apt-get install -y perl-modules && rm -fr /var/lib/apt/lis
     perl umod.pl -b ut-server -i UTInoxxPack.umod && \
     perl umod.pl -b ut-server -i UTBonusPack4.umod && \
     mv CTF-HallOfGiants.unr CTF-Orbital.unr ut-server/Maps/
-
-# tidy permissions
-RUN chown -R root:root ut-server
 
 COPY ./server ./
 # adjust some defaults
@@ -34,7 +32,5 @@ RUN apt-get update && apt-get install -y libxext6 libx11-6 && rm -fr /var/lib/ap
 COPY --from=tmp ut-server/ /ut-server/
 COPY --from=tmp ut-server/System/UnrealTournament.ini /.loki/ut/System/
 COPY --from=tmp server /server
-RUN adduser --system --no-create-home ut && chown -R ut:nogroup /.loki/ut
-USER ut
 VOLUME /.loki/ut
 CMD [ "/server" ]

@@ -46,6 +46,37 @@ END { if (done == 0) { if (instate >= 1) { print item "=" value; } else { print 
    fi
 }
 
+create_symlink() {
+  target="$1"
+  relative_name="${target#*/.loki/ut/}"
+  relative_dir=$(dirname "$relative_name")
+  echo "LINK $target"
+
+  if [ ! -e "${UT_PATH}/${relative_name}" ] && [ -e "${target}" ]; then
+    echo "MKDIR ${UT_PATH}/${relative_dir}"
+    mkdir -p "${UT_PATH}/${relative_dir}"
+    ln -s "$target" "${UT_PATH}/${relative_name}"
+  fi
+}
+
+# UT will not open native libraries (e.g. parts of ACE, if in use) from the preference directory.
+# To work around this, on startup we symlink any dll/so from the preference dir into the main game.
+# Additionally, some tools (also looking at ACE) do not work with resources in the preference directory
+# (in this case, I am referring to UPackages), so an attempt is also made to link ACE specific files
+# and all u/int files.
+create_symlinks() {
+  for file in /.loki/ut/System/*.u \
+              /.loki/ut/System/*.int \
+              /.loki/ut/System/*.so \
+              /.loki/ut/System/*.dll \
+              /.loki/ut/System/ACEFileList.txt \
+              /.loki/ut/Logs \
+              /.loki/ut/Shots \
+              /.loki/ut/System/PlayerManager; do
+    create_symlink "$file"
+  done
+}
+
 launch_server() {
   UCC_CMD="${STARTUP_MAP}?game=$GAME_MODE"
   if [ -n "$MUTATORS" ]; then
@@ -73,5 +104,6 @@ if [ "$#" -gt 0 ]; then
     shift
   done
 else
+  create_symlinks
   launch_server
 fi
